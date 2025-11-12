@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "smartlead"
+  ],
+  "enableAllProjectMcpServers": true
+}

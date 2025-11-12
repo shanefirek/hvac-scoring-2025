@@ -1,9 +1,9 @@
 # Appletree Outbound Email Sequences
 
 ## A-TIER CAMPAIGN
-**Target:** ServiceTitan/Jobber/HousecallPro users + high reviews (20-30 points)
-**Strategy:** Tech + scale sophistication play
-**Sequence:** 4 emails over 14 days
+**Target:** ServiceTitan/Jobber/HousecallPro users + high reviews (20-30 points)  
+**Strategy:** Tech + scale sophistication play  
+**Sequence:** 4 emails over 7 days
 
 ---
 
@@ -27,7 +27,7 @@ Appletree Business Services
 
 ---
 
-### Email 2 (Day 4)
+### Email 2 (Day 2)
 **Subject:** Re: Quick question about {{company}}'s accounting
 
 {{first_name}},
@@ -51,7 +51,7 @@ Appletree Business Services
 
 ---
 
-### Email 3 (Day 9)
+### Email 3 (Day 5)
 **Subject:** Your tech stack vs. your CPA
 
 {{first_name}},
@@ -77,7 +77,7 @@ Appletree Business Services
 
 ---
 
-### Email 4 (Day 14)
+### Email 4 (Day 7)
 **Subject:** Last note about {{company}}
 
 {{first_name}},
@@ -98,9 +98,9 @@ Appletree Business Services
 ---
 
 ## B-TIER CAMPAIGN
-**Target:** Good reviews OR service software (10-19 points)
-**Strategy:** Scale or sophistication signal, growth pains focus
-**Sequence:** 3 emails over 12 days
+**Target:** Good reviews OR service software (10-19 points)  
+**Strategy:** Scale or sophistication signal, growth pains focus  
+**Sequence:** 3 emails over 8 days
 
 ---
 
@@ -115,7 +115,7 @@ Quick question: How responsive is your CPA during tax season?
 
 Most HVAC owners at your scale tell us they can't get their accountant on the phone for weeks. Then April hits and there's a $12k surprise bill they weren't planning for.
 
-We're Appletree Business Services — we work exclusively with trades companies. Monthly books, proactive tax planning, fixed monthly pricing.
+We're Appletree Business Services. We work with a lot of HVAC, plumbing, and home service businesses. Monthly books, proactive tax planning, fixed monthly pricing.
 
 Worth a conversation?
 
@@ -124,7 +124,7 @@ Appletree Business Services
 
 ---
 
-### Email 2 (Day 5)
+### Email 2 (Day 4)
 **Subject:** Re: Saw {{company}} on Google
 
 {{first_name}},
@@ -153,7 +153,7 @@ Appletree Business Services
 
 ---
 
-### Email 3 (Day 12)
+### Email 3 (Day 8)
 **Subject:** One last thing about {{company}}
 
 {{first_name}},
@@ -196,7 +196,7 @@ Most HVAC owners tell us the same story — they can't get their CPA on the phon
 
 Sound familiar?
 
-We're Appletree Business Services. We specialize in HVAC, plumbing, and trades companies.
+We're Appletree Business Services. We work with a lot of HVAC, plumbing, and home service businesses.
 
 We keep your books simple, your taxes predictable, and your weekends stress-free.
 
@@ -221,7 +221,7 @@ If you're dealing with:
 
 We can help.
 
-We're Appletree — we work exclusively with trades businesses. Monthly bookkeeping, proactive tax planning, fixed pricing. No surprises.
+We're Appletree — we work with a lot of trades and home service businesses. Monthly bookkeeping, proactive tax planning, fixed pricing. No surprises.
 
 You handle the calls. We handle the numbers.
 
@@ -289,26 +289,3 @@ If you want to start 2026 with better accounting, here's my calendar: [link]
 
 Shane  
 Appletree Business Services
-
-**Key Messaging Principles:**
-1. Pain points first (unresponsive CPA, surprise bills) - NOT sophistication/better financials
-2. Conversational, owner-to-owner tone
-3. No accounting jargon
-4. Use trades language (jobs, busy season, etc.)
-5. Short, scannable emails
-6. Clear value prop in every email
-7. Direct questions, not clever hooks
-
-**Success Metrics to Track:**
-- Open rates by tier (does scoring matter?)
-- Reply rates by tier
-- Personal email vs catchall email performance gap
-- Pain point resonance (which gets more replies: unresponsive CPA vs tax surprises)
-- "Talk to me in January" replies (build pipeline)
-- Meeting bookings by tier
-
-**Realistic Q4 Expectations:**
-- Personal emails (85): 3-5 replies, 1-2 meetings
-- Catchall emails (65): 1-2 replies, 0-1 meetings
-- Total: 4-7 replies, 1-3 meetings by end of December
-- Most replies will be "talk to me in January" - this is expected and good
