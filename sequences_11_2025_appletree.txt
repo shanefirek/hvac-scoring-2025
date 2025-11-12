@@ -22,7 +22,7 @@ We're Appletree Business Services. We specialize in trades at your scale — mon
 
 Worth a conversation? [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -46,7 +46,7 @@ We handle bookkeeping, payroll, and strategic tax planning for growing HVAC comp
 
 If your current CPA setup isn't working, let's talk: [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -72,7 +72,7 @@ Companies like {{company}} deserve financial systems as dialed in as their opera
 
 Open to a quick call?
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -92,7 +92,7 @@ We're Appletree. We clean up the financial side so you can focus on running jobs
 
 If now's not the time, no worries. But if it is, here's my calendar: [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -119,7 +119,7 @@ We're Appletree Business Services. We work with a lot of HVAC, plumbing, and hom
 
 Worth a conversation?
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -148,7 +148,7 @@ What we do:
 
 If that's what {{company}} needs, let's talk: [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -173,7 +173,7 @@ We're Appletree. We simplify the financial side so you can focus on getting jobs
 
 Here's my calendar if you want to chat: [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -202,7 +202,7 @@ We keep your books simple, your taxes predictable, and your weekends stress-free
 
 Worth 15 minutes to see if we're a fit?
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -227,7 +227,7 @@ You handle the calls. We handle the numbers.
 
 If you want to talk, here's my calendar: [Calendly link]
 
-Shane
+Patrick
 Appletree Business Services
 
 ---
@@ -260,8 +260,8 @@ Appletree Business Services
 - Replace `[Calendly link]` with Patrick's actual booking URL
 
 **Sender Identity:**
-- Name: Shane from Appletree (or Shane Firek if preferred)
-- Email: shane@appletreebusiness.com (or domain you're using)
+- Name: Patrick from Appletree
+- Email: patrick@appletreebusiness.com (or domain you're using)
 
 **Holiday Context:**
 - Launching into Q4 2025 (heating season = busy time for HVAC)
@@ -287,7 +287,7 @@ Most HVAC owners we work with switched because their accountant was MIA during t
 
 If you want to start 2026 with better accounting, here's my calendar: [link]
 
-Shane
+Patrick
 Appletree Business Services
 
 **Key Messaging Principles:**
