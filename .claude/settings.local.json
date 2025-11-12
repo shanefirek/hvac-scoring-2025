@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Read(//var/folders/02/t4j5kl3d3v78yw10t0h2xngc0000gn/T/TemporaryItems/NSIRD_screencaptureui_o6tIbm/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+      "smartlead": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "mcp-remote",
+          "https://mcp.smartlead.ai/sse?user_api_key=38ee964e-b100-4e2b-bfc1-a6ebf5ef48d3_4l5qyv8"
+        ]
+      }
+    }
+  }
