@@ -1,9 +1,9 @@
 # Appletree Outbound Email Sequences
 
 ## A-TIER CAMPAIGN
-**Target:** ServiceTitan/Jobber/HousecallPro users + high reviews (20-30 points)  
-**Strategy:** Tech + scale sophistication play  
-**Sequence:** 4 emails over 7 days
+**Target:** ServiceTitan/Jobber/HousecallPro users + high reviews (20-30 points)
+**Strategy:** Tech + scale sophistication play
+**Sequence:** 4 emails over 14 days
 
 ---
 
@@ -27,7 +27,7 @@ Appletree Business Services
 
 ---
 
-### Email 2 (Day 2)
+### Email 2 (Day 4)
 **Subject:** Re: Quick question about {{company}}'s accounting
 
 {{first_name}},
@@ -51,7 +51,7 @@ Appletree Business Services
 
 ---
 
-### Email 3 (Day 5)
+### Email 3 (Day 9)
 **Subject:** Your tech stack vs. your CPA
 
 {{first_name}},
@@ -77,7 +77,7 @@ Appletree Business Services
 
 ---
 
-### Email 4 (Day 7)
+### Email 4 (Day 14)
 **Subject:** Last note about {{company}}
 
 {{first_name}},
@@ -98,9 +98,9 @@ Appletree Business Services
 ---
 
 ## B-TIER CAMPAIGN
-**Target:** Good reviews OR service software (10-19 points)  
-**Strategy:** Scale or sophistication signal, growth pains focus  
-**Sequence:** 3 emails over 8 days
+**Target:** Good reviews OR service software (10-19 points)
+**Strategy:** Scale or sophistication signal, growth pains focus
+**Sequence:** 3 emails over 12 days
 
 ---
 
@@ -124,7 +124,7 @@ Appletree Business Services
 
 ---
 
-### Email 2 (Day 4)
+### Email 2 (Day 5)
 **Subject:** Re: Saw {{company}} on Google
 
 {{first_name}},
@@ -153,7 +153,7 @@ Appletree Business Services
 
 ---
 
-### Email 3 (Day 8)
+### Email 3 (Day 12)
 **Subject:** One last thing about {{company}}
 
 {{first_name}},
