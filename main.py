@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 import os
 
-app = FastAPI(title="Appletree HVAC Lead Scoring API")
+app = FastAPI(title="Appletree HVAC Lead Scoring API", version="1.0.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,7 +88,7 @@ def root():
     return {
         "status": "healthy",
         "service": "Appletree HVAC Lead Scoring API",
-        "version": "1.0.0"
+        "version": "1.0.1"
     }
 
 @app.post("/score-lead", response_model=LeadScore)
