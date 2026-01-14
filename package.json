@@ -1,0 +1,14 @@
+{
+  "name": "appletree-data-pipeline",
+  "version": "1.0.0",
+  "dependencies": {
+    "@trigger.dev/sdk": "^4.2.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "@trigger.dev/build": "^4.2.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,334 @@
+{
+  "name": "Weekly Lead Sync - Supabase to Smartlead",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 9,
+              "triggerAtDay": [1]
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/campaigns?status=eq.ACTIVE&select=smartlead_campaign_id,name,tier,daily_send_limit&order=tier",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "get-campaigns",
+      "name": "Get Active Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YY3EtNtcV5iZP93u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-campaigns",
+      "name": "Loop Campaigns",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/leads?tier=eq.' + $json.tier + '&or=(in_smartlead.eq.false,in_smartlead.is.null)&select=id,email,first_name,last_name,company,score,tier&limit=' + $json.daily_send_limit }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {}
+      },
+      "id": "get-leads",
+      "name": "Get Leads for Tier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [800, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YY3EtNtcV5iZP93u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-leads-exist",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-leads",
+      "name": "Has Leads?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get campaign info from loop\nconst campaign = $('Loop Campaigns').item.json;\n\n// Get leads from query\nconst leads = $input.all();\n\nif (leads.length === 0) {\n  return [{ json: { skip: true, reason: 'No leads for tier ' + campaign.tier } }];\n}\n\n// Format for Smartlead API\nconst smartleadLeads = leads.map(item => ({\n  email: item.json.email,\n  first_name: item.json.first_name || '',\n  last_name: item.json.last_name || '',\n  company_name: item.json.company || '',\n  custom_fields: {\n    score: String(item.json.score || 0),\n    tier: item.json.tier\n  }\n}));\n\n// Keep track of lead IDs and emails for later updates\nconst leadData = leads.map(item => ({\n  id: item.json.id,\n  email: item.json.email\n}));\n\nreturn [{\n  json: {\n    campaign_id: campaign.smartlead_campaign_id,\n    campaign_name: campaign.name,\n    tier: campaign.tier,\n    leads: smartleadLeads,\n    lead_data: leadData,\n    lead_count: leads.length,\n    emails: leadData.map(l => l.email)\n  }\n}];"
+      },
+      "id": "format-leads",
+      "name": "Format for Smartlead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://server.smartlead.ai/api/v1/campaigns/{{ $json.campaign_id }}/leads?api_key=38ee964e-b100-4e2b-bfc1-a6ebf5ef48d3_4l5qyv8",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"lead_list\": $json.leads } }}",
+        "options": {}
+      },
+      "id": "add-to-smartlead",
+      "name": "Add to Smartlead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/leads?email=in.({{ $('Format for Smartlead').item.json.emails.join(',') }})",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"in_smartlead\": true, \"last_smartlead_sync\": new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "update-leads-synced",
+      "name": "Mark Leads Synced",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1600, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YY3EtNtcV5iZP93u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build campaign tracking records\nconst formatData = $('Format for Smartlead').item.json;\n\nconst records = formatData.lead_data.map(lead => ({\n  lead_id: lead.id,\n  smartlead_campaign_id: formatData.campaign_id,\n  campaign_name: formatData.campaign_name,\n  tier: formatData.tier,\n  status: 'PENDING'\n}));\n\nreturn [{ json: { records: records, count: records.length } }];"
+      },
+      "id": "build-tracking",
+      "name": "Build Tracking Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/campaign_tracking",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.records }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "insert-tracking",
+      "name": "Insert Tracking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YY3EtNtcV5iZP93u",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "no-op",
+      "name": "No Leads - Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1200, 400]
+    }
+  ],
+  "connections": {
+    "Weekly Monday 9am": {
+      "main": [
+        [
+          {
+            "node": "Get Active Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Loop Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Get Leads for Tier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get Leads for Tier": {
+      "main": [
+        [
+          {
+            "node": "Has Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Leads?": {
+      "main": [
+        [
+          {
+            "node": "Format for Smartlead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads - Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Smartlead": {
+      "main": [
+        [
+          {
+            "node": "Add to Smartlead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Smartlead": {
+      "main": [
+        [
+          {
+            "node": "Mark Leads Synced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Leads Synced": {
+      "main": [
+        [
+          {
+            "node": "Build Tracking Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Tracking Records": {
+      "main": [
+        [
+          {
+            "node": "Insert Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Tracking": {
+      "main": [
+        [
+          {
+            "node": "Loop Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Leads - Skip": {
+      "main": [
+        [
+          {
+            "node": "Loop Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0
+}

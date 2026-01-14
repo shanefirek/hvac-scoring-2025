@@ -1,0 +1,599 @@
+{
+  "name": "HVAC GTM Flywheel - Clay → Supabase → Smartlead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clay-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "clay-webhook-trigger",
+      "name": "Clay Webhook (Lead Enriched)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "clay-lead-enrichment"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smartlead-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "smartlead-webhook-trigger",
+      "name": "Smartlead Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 700],
+      "webhookId": "smartlead-engagement-events"
+    },
+    {
+      "parameters": {},
+      "id": "manual-add-leads-trigger",
+      "name": "Manual: Add Leads to Campaigns",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [250, 1100]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        },
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyMonth",
+              "monthDay": 1
+            }
+          ]
+        }
+      },
+      "id": "monthly-campaign-cron",
+      "name": "Monthly Campaign Builder (1st of Month)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 1500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Clay webhook payload\n// Clay sends: clay_id, email, first_name, last_name, company, domain, linkedin_url, reviews_count, service_software, score, tier, messaging_strategy\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  \n  results.push({\n    json: {\n      clay_id: body.clay_id || body.id,\n      email: body.email,\n      first_name: body.first_name || body.firstName,\n      last_name: body.last_name || body.lastName,\n      company: body.company || body.company_name,\n      domain: body.domain,\n      linkedin_url: body.linkedin_url || body.linkedinUrl,\n      reviews_count: parseInt(body.reviews_count || body.reviewsCount || 0),\n      service_software: body.service_software || body.serviceSoftware || null,\n      score: parseInt(body.score || 0),\n      tier: body.tier,\n      messaging_strategy: body.messaging_strategy || body.messagingStrategy,\n      score_breakdown: body.score_breakdown || body.scoreBreakdown || {},\n      clay_raw_data: body\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "parse-clay-payload",
+      "name": "Parse Clay Webhook Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/sync_lead_from_clay",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"p_clay_id\": $json.clay_id,\n  \"p_email\": $json.email,\n  \"p_first_name\": $json.first_name,\n  \"p_last_name\": $json.last_name,\n  \"p_company\": $json.company,\n  \"p_domain\": $json.domain,\n  \"p_linkedin_url\": $json.linkedin_url,\n  \"p_reviews_count\": $json.reviews_count,\n  \"p_service_software\": $json.service_software,\n  \"p_score\": $json.score,\n  \"p_tier\": $json.tier,\n  \"p_messaging_strategy\": $json.messaging_strategy,\n  \"p_score_breakdown\": $json.score_breakdown,\n  \"p_clay_data\": $json.clay_raw_data\n} }}",
+        "options": {}
+      },
+      "id": "upsert-lead-supabase",
+      "name": "Upsert Lead to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"lead_id\": $json.lead_id, \"email\": $(\"Parse Clay Webhook Data\").item.json.email } }}"
+      },
+      "id": "clay-webhook-response",
+      "name": "Respond to Clay Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse Smartlead engagement event\n// Expected payload: event_type, lead_email, campaign_id, sequence_number, subject, stats_id, etc.\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  \n  results.push({\n    json: {\n      email: body.lead_email || body.email,\n      campaign_id: parseInt(body.campaign_id || body.campaignId),\n      event_type: body.event_type || body.eventType,\n      sequence_number: parseInt(body.sequence_number || body.sequenceNumber || 0),\n      email_subject: body.subject || body.email_subject,\n      email_stats_id: body.stats_id || body.email_stats_id,\n      event_data: body\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "parse-smartlead-event",
+      "name": "Parse Smartlead Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/record_smartlead_event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"p_email\": $json.email,\n  \"p_campaign_id\": $json.campaign_id,\n  \"p_event_type\": $json.event_type,\n  \"p_sequence_number\": $json.sequence_number,\n  \"p_email_subject\": $json.email_subject,\n  \"p_email_stats_id\": $json.email_stats_id,\n  \"p_event_data\": $json.event_data\n} }}",
+        "options": {}
+      },
+      "id": "record-event-supabase",
+      "name": "Record Event in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 700]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event_type }}",
+              "operation": "equals",
+              "value2": "REPLIED"
+            }
+          ]
+        }
+      },
+      "id": "check-if-reply",
+      "name": "Is Reply Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 700]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"text\": \"🎯 New Reply from \" + $(\"Parse Smartlead Event\").item.json.email } }}",
+        "options": {}
+      },
+      "id": "notify-slack-reply",
+      "name": "Notify Slack (Reply)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 650]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"event_id\": $json.event_id } }}"
+      },
+      "id": "smartlead-webhook-response",
+      "name": "Respond to Smartlead Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 750]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Get current month for campaign filtering\nconst now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\n\nreturn [{\n  json: {\n    campaign_month: `${year}-${month}`,\n    current_date: now.toISOString()\n  }\n}];"
+      },
+      "id": "get-current-month",
+      "name": "Get Current Month",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 1100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/campaigns?campaign_month=eq.{{ $json.campaign_month }}&status=eq.ACTIVE&select=smartlead_campaign_id,name,tier,daily_send_limit&order=tier",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-active-campaigns",
+      "name": "Get Active Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 1100]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-campaigns",
+      "name": "Loop Through Campaigns",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 1100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/get_leads_for_campaign",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"p_tier\": $(\"Loop Through Campaigns\").item.json.tier,\n  \"p_campaign_month\": $(\"Get Current Month\").item.json.campaign_month,\n  \"p_daily_limit\": $(\"Loop Through Campaigns\").item.json.daily_send_limit\n} }}",
+        "options": {}
+      },
+      "id": "get-leads-for-campaign",
+      "name": "Get Leads Ready for Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 1100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Format leads for Smartlead API\nconst campaign = $(\"Loop Through Campaigns\").item.json;\nconst leads = $input.all();\n\nconst formattedLeads = leads.map(item => ({\n  email: item.json.email,\n  first_name: item.json.first_name,\n  last_name: item.json.last_name,\n  company_name: item.json.company,\n  custom_fields: {\n    score: item.json.score,\n    tier: campaign.tier\n  }\n}));\n\nreturn [{\n  json: {\n    campaign_id: campaign.smartlead_campaign_id,\n    campaign_name: campaign.name,\n    tier: campaign.tier,\n    leads: formattedLeads,\n    lead_count: formattedLeads.length\n  }\n}];"
+      },
+      "id": "format-leads-for-smartlead",
+      "name": "Format Leads for Smartlead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 1100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://server.smartlead.ai/api/v1/campaigns/{{ $json.campaign_id }}/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.SMARTLEAD_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"leads\": $json.leads } }}",
+        "options": {}
+      },
+      "id": "add-leads-to-smartlead",
+      "name": "Add Leads to Smartlead Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1450, 1100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Fetch lead IDs from Supabase for the emails we just added\nconst campaign = $(\"Format Leads for Smartlead\").item.json;\nconst emails = campaign.leads.map(l => l.email);\n\n// Make request to get lead IDs\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: `${$env.SUPABASE_URL}/rest/v1/leads?email=in.(${emails.join(',')})&select=id,email`,\n  headers: {\n    'apikey': $env.SUPABASE_SERVICE_KEY,\n    'Authorization': `Bearer ${$env.SUPABASE_SERVICE_KEY}`\n  }\n});\n\nconst leadMap = {};\nresponse.forEach(lead => {\n  leadMap[lead.email] = lead.id;\n});\n\n// Prepare campaign tracking records\nconst trackingRecords = emails.map(email => ({\n  lead_id: leadMap[email],\n  smartlead_campaign_id: campaign.campaign_id,\n  campaign_name: campaign.campaign_name,\n  campaign_month: $(\"Get Current Month\").item.json.campaign_month,\n  tier: campaign.tier,\n  status: 'PENDING'\n})).filter(r => r.lead_id); // Only include records where we found a lead_id\n\nreturn [{ json: { records: trackingRecords, count: trackingRecords.length } }];"
+      },
+      "id": "prepare-campaign-tracking",
+      "name": "Prepare Campaign Tracking Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 1100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/campaign_tracking",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.records }}",
+        "options": {}
+      },
+      "id": "insert-campaign-tracking",
+      "name": "Insert Campaign Tracking Records",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 1100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Update leads table with Smartlead tracking fields\nconst trackingData = $(\"Prepare Campaign Tracking Records\").item.json;\nconst records = trackingData.records || [];\n\nif (records.length === 0) {\n  return [{ json: { message: 'No leads to update', updated: 0 } }];\n}\n\n// Extract unique lead_ids and campaign_id\nconst leadIds = records.map(r => r.lead_id).filter(id => id);\nconst campaignId = records[0]?.smartlead_campaign_id;\n\nif (leadIds.length === 0 || !campaignId) {\n  return [{ json: { message: 'Missing lead IDs or campaign ID', updated: 0 } }];\n}\n\n// Update each lead's tracking fields\nfor (const leadId of leadIds) {\n  await this.helpers.httpRequest({\n    method: 'PATCH',\n    url: `${$env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,\n    headers: {\n      'apikey': $env.SUPABASE_SERVICE_KEY,\n      'Authorization': `Bearer ${$env.SUPABASE_SERVICE_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'return=minimal'\n    },\n    body: {\n      in_smartlead: true,\n      smartlead_campaign_ids: `{${campaignId}}`, // PostgreSQL array literal\n      last_smartlead_sync: new Date().toISOString()\n    }\n  });\n}\n\nreturn [{ json: { message: 'Leads updated with tracking fields', updated: leadIds.length, campaign_id: campaignId } }];"
+      },
+      "id": "update-lead-tracking",
+      "name": "Update Lead Tracking Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 1100]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Prepare data for monthly campaign creation\nconst now = new Date();\nconst year = now.getFullYear();\nconst month = String(now.getMonth() + 1).padStart(2, '0');\nconst monthName = now.toLocaleString('default', { month: 'short' });\n\nconst tiers = ['A', 'B', 'C'];\nconst campaigns = tiers.map(tier => ({\n  tier: tier,\n  campaign_month: `${year}-${month}`,\n  campaign_name: `${monthName} ${year} ${tier}-Tier HVAC`,\n  daily_send_limit: tier === 'B' ? 25 : 30\n}));\n\nreturn campaigns.map(c => ({ json: c }));"
+      },
+      "id": "prepare-monthly-campaigns",
+      "name": "Prepare Monthly Campaign Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 1500]
+    }
+  ],
+  "connections": {
+    "Clay Webhook (Lead Enriched)": {
+      "main": [
+        [
+          {
+            "node": "Parse Clay Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Clay Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Upsert Lead to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Lead to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Respond to Clay Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smartlead Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Smartlead Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Smartlead Event": {
+      "main": [
+        [
+          {
+            "node": "Record Event in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Event in Supabase": {
+      "main": [
+        [
+          {
+            "node": "Is Reply Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Reply Event?": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack (Reply)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Smartlead Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Smartlead Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual: Add Leads to Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Get Current Month",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Month": {
+      "main": [
+        [
+          {
+            "node": "Get Active Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Get Leads Ready for Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Through Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads Ready for Campaign": {
+      "main": [
+        [
+          {
+            "node": "Format Leads for Smartlead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Leads for Smartlead": {
+      "main": [
+        [
+          {
+            "node": "Add Leads to Smartlead Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Leads to Smartlead Campaign": {
+      "main": [
+        [
+          {
+            "node": "Prepare Campaign Tracking Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Campaign Tracking Records": {
+      "main": [
+        [
+          {
+            "node": "Insert Campaign Tracking Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monthly Campaign Builder (1st of Month)": {
+      "main": [
+        [
+          {
+            "node": "Prepare Monthly Campaign Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-11-19T00:00:00.000Z",
+  "versionId": "2.0"
+}

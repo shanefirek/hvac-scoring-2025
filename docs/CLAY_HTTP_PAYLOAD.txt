@@ -1,0 +1,71 @@
+==================================================
+CLAY HTTP API COLUMN - COPY PASTE CONFIG
+==================================================
+
+Column Name: Sync to Supabase
+Method: POST
+URL: [GET FROM N8N - see instructions below]
+
+Headers:
+Content-Type: application/json
+
+Body (paste this, then fix the {{Field Names}} to match your columns):
+
+{
+  "clay_id": "{{Row ID}}",
+  "email": "{{Email}}",
+  "first_name": "{{First Name}}",
+  "last_name": "{{Last Name}}",
+  "company": "{{Company}}",
+  "domain": "{{Domain}}",
+  "linkedin_url": "{{LinkedIn URL}}",
+  "reviews_count": {{Reviews Count}},
+  "service_software": "{{Service Software}}",
+  "score": {{Score}},
+  "tier": "{{Tier}}",
+  "messaging_strategy": "{{Messaging Strategy}}",
+  "score_breakdown": {{Score Breakdown}}
+}
+
+==================================================
+HOW TO GET YOUR N8N WEBHOOK URL
+==================================================
+
+1. Go to n8n
+2. Open workflow: "HVAC GTM Flywheel - Clay → Supabase → Smartlead"
+3. Click the "Clay Webhook (Lead Enriched)" node
+4. Click "Copy Production Webhook URL"
+5. Paste that URL in the Clay HTTP API URL field
+
+Should look like:
+https://your-instance.app.n8n.cloud/webhook/clay-webhook
+
+==================================================
+FIELD MAPPING (adjust to your Clay column names)
+==================================================
+
+{{Row ID}} = built-in Clay field (don't change)
+{{Email}} = your email column (might be "Final Email" or "Verified Email")
+{{First Name}} = first name column
+{{Last Name}} = last name column
+{{Company}} = company name column
+{{Domain}} = website domain column
+{{LinkedIn URL}} = LinkedIn profile URL
+{{Reviews Count}} = Google reviews count (NUMBER - no quotes)
+{{Service Software}} = FSM software (ServiceTitan, Jobber, etc.)
+{{Score}} = Lead score from scoring API (NUMBER - no quotes)
+{{Tier}} = A/B/C tier from scoring API
+{{Messaging Strategy}} = Messaging strategy from scoring API
+{{Score Breakdown}} = Score breakdown JSON (no quotes if already JSON)
+
+==================================================
+TEST FIRST
+==================================================
+
+1. Filter Clay table to 1 row
+2. Run HTTP API column on that 1 row
+3. Check response: {"success": true, "lead_id": "...", "email": "..."}
+4. Check Supabase - you should see 1 new lead
+5. If it works, remove filter and run on all 500 rows
+
+==================================================

@@ -1,0 +1,604 @@
+{
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "clay-webhook",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "47664a2f-c188-435c-8cbe-a058c0d66ac7",
+        "name": "Clay Webhook (Lead Enriched)",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1.1,
+        "position": [
+          800,
+          -208
+        ],
+        "webhookId": "clay-lead-enrichment"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "smartlead-events",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "f1ba35ec-6696-44be-bbb2-25670c426261",
+        "name": "Smartlead Events Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1.1,
+        "position": [
+          944,
+          176
+        ],
+        "webhookId": "smartlead-engagement-events"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Parse Clay webhook payload\n// Clay sends: clay_id, email, first_name, last_name, company, domain, linkedin_url, reviews_count, service_software, score, tier, messaging_strategy, phone, city, state, postal_code\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  \n  results.push({\n    json: {\n      clay_id: body.clay_id || body.id,\n      email: body.email,\n      first_name: body.first_name || body.firstName,\n      last_name: body.last_name || body.lastName,\n      company: body.company || body.company_name,\n      domain: body.domain,\n      linkedin_url: body.linkedin_url || body.linkedinUrl,\n      reviews_count: parseInt(body.reviews_count || body.reviewsCount || body.reviews || 0),\n      service_software: body.service_software || body.serviceSoftware || null,\n      score: parseInt(body.score || 0),\n      tier: body.tier,\n      messaging_strategy: body.messaging_strategy || body.messagingStrategy,\n      score_breakdown: body.score_breakdown || body.scoreBreakdown || {},\n      // NEW: Location and contact fields\n      phone_number: body.phone || body.phone_number || null,\n      city: body.city || null,\n      state: body.state || null,\n      postal_code: body.postal_code || body.postalCode || body.zip || null,\n      clay_raw_data: body\n    }\n  });\n}\n\nreturn results;"
+        },
+        "id": "a4fbd772-50b8-4759-bbb6-7920c55e0514",
+        "name": "Parse Clay Webhook Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1008,
+          -208
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/rpc/sync_lead_from_clay",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ {\n  \"p_clay_id\": $json.clay_id,\n  \"p_email\": $json.email,\n  \"p_first_name\": $json.first_name,\n  \"p_last_name\": $json.last_name,\n  \"p_company\": $json.company,\n  \"p_domain\": $json.domain,\n  \"p_linkedin_url\": $json.linkedin_url,\n  \"p_reviews_count\": $json.reviews_count,\n  \"p_service_software\": $json.service_software,\n  \"p_score\": $json.score,\n  \"p_tier\": $json.tier,\n  \"p_messaging_strategy\": $json.messaging_strategy,\n  \"p_score_breakdown\": $json.score_breakdown,\n  \"p_clay_data\": $json.clay_raw_data,\n  \"p_phone_number\": $json.phone_number,\n  \"p_city\": $json.city,\n  \"p_state\": $json.state,\n  \"p_postal_code\": $json.postal_code\n} }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "responseFormat": "text"
+              }
+            }
+          }
+        },
+        "id": "e165ce09-f696-4940-a493-ea39f2bc45c1",
+        "name": "Upsert Lead to Supabase",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1200,
+          -208
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { \"success\": true, \"lead_id\": $json.lead_id, \"email\": $(\"Parse Clay Webhook Data\").item.json.email } }}",
+          "options": {}
+        },
+        "id": "112ecb87-76b4-484e-92a1-081a0d291967",
+        "name": "Respond to Clay Webhook",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          1408,
+          -208
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Parse Smartlead engagement event\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n\n  results.push({\n    json: {\n      smartlead_lead_id: body.sl_email_lead_id,\n      email: body.to_email,\n      campaign_id: parseInt(body.campaign_id || 0),\n      event_type: body.event_type,\n      sequence_number: parseInt(body.sequence_number || 0),\n      email_subject: body.subject,\n      email_stats_id: body.stats_id,\n      event_data: body\n    }\n  });\n}\n\nreturn results;"
+        },
+        "id": "ab1482bb-a004-4d57-bb39-ef03b5d88bd8",
+        "name": "Parse Smartlead Event",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          176
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/rpc/handle_smartlead_webhook",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ {\n    \"p_smartlead_lead_id\": $json.smartlead_lead_id,\n    \"p_email\": $json.email,\n    \"p_event_type\": $json.event_type,\n    \"p_campaign_id\": $json.campaign_id,\n    \"p_event_data\": $json.event_data\n  } }}",
+          "options": {}
+        },
+        "id": "cfdf2d30-de1b-4a1e-9fec-41d574ede1e7",
+        "name": "Record Event in Supabase",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1408,
+          176
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"text\": \"🎯 New Reply from \" + $(\"Parse Smartlead Event\").item.json.email } }}",
+          "options": {}
+        },
+        "id": "dfbb19bc-f1eb-49fc-a9ba-df035e6fe94a",
+        "name": "Notify Slack (Reply)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1904,
+          48
+        ],
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { \"success\": true, \"event_id\": $json.event_id } }}",
+          "options": {}
+        },
+        "id": "5aaa8185-1579-4735-9d9a-5300bc01f108",
+        "name": "Respond to Smartlead Webhook",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          1648,
+          176
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  1
+                ],
+                "triggerAtHour": 9
+              }
+            ]
+          }
+        },
+        "id": "6674481f-dce7-434c-baa1-5457a7249e12",
+        "name": "Weekly Monday 9am",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          416,
+          592
+        ],
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "id": "9bed6c5c-592a-4a1d-aa4a-c2f74d1280a2",
+        "name": "Loop Campaigns",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          816,
+          592
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ 'https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/leads?tier=eq.' + $json.tier + '&or=(in_smartlead.eq.false,in_smartlead.is.null)&select=id,email,first_name,last_name,company,score,tier&limit=' + $json.daily_send_limit }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "options": {}
+        },
+        "id": "2a24813e-e0a3-46c2-a019-ec9b993acf34",
+        "name": "Get Leads for Tier",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1040,
+          576
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "check-leads-exist",
+                "leftValue": "={{ $input.all().length }}",
+                "rightValue": 0,
+                "operator": {
+                  "type": "number",
+                  "operation": "gt"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "33060e74-0518-44c3-b2d1-4b7a718fbf86",
+        "name": "Has Leads?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1184,
+          576
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get campaign info from loop\nconst campaign = $('Loop Campaigns').item.json;\n\n// Get leads from query\nconst leads = $input.all();\n\nif (leads.length === 0) {\n  return [{ json: { skip: true, reason: 'No leads for tier ' + campaign.tier } }];\n}\n\n// Format for Smartlead API\nconst smartleadLeads = leads.map(item => ({\n  email: item.json.email,\n  first_name: item.json.first_name || '',\n  last_name: item.json.last_name || '',\n  company_name: item.json.company || '',\n  custom_fields: {\n    score: String(item.json.score || 0),\n    tier: item.json.tier\n  }\n}));\n\n// Keep track of lead IDs and emails for later updates\nconst leadData = leads.map(item => ({\n  id: item.json.id,\n  email: item.json.email\n}));\n\nreturn [{\n  json: {\n    campaign_id: campaign.smartlead_campaign_id,\n    campaign_name: campaign.name,\n    tier: campaign.tier,\n    leads: smartleadLeads,\n    lead_data: leadData,\n    lead_count: leads.length,\n    emails: leadData.map(l => l.email)\n  }\n}];"
+        },
+        "id": "412e0eff-6e42-4080-a88a-77e89e3fcf6a",
+        "name": "Format for Smartlead",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1376,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://server.smartlead.ai/api/v1/campaigns/{{ $json.campaign_id }}/leads?api_key=38ee964e-b100-4e2b-bfc1-a6ebf5ef48d3_4l5qyv8",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"lead_list\": $json.leads } }}",
+          "options": {}
+        },
+        "id": "3bf60bb4-5ff9-4232-a75e-14f421667c00",
+        "name": "Add to Smartlead",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1584,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/leads?email=in.({{ $('Format for Smartlead').item.json.emails.join(',') }})",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"in_smartlead\": true, \"last_smartlead_sync\": new Date().toISOString() } }}",
+          "options": {}
+        },
+        "id": "6bba9d72-4d28-4628-971c-5f7c39b23b60",
+        "name": "Mark Leads Synced",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1776,
+          560
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Build campaign tracking records\nconst formatData = $('Format for Smartlead').item.json;\n\nconst records = formatData.lead_data.map(lead => ({\n  lead_id: lead.id,\n  smartlead_campaign_id: formatData.campaign_id,\n  campaign_name: formatData.campaign_name,\n  tier: formatData.tier,\n  status: 'PENDING'\n}));\n\nreturn [{ json: { records: records, count: records.length } }];"
+        },
+        "id": "3945a368-ad81-47d9-bd9d-c1abeb82e52c",
+        "name": "Build Tracking Records",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1984,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/campaign_tracking",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.records }}",
+          "options": {
+            "response": {
+              "response": {}
+            }
+          }
+        },
+        "id": "1824f63a-22c7-4d86-9aab-33422a3474da",
+        "name": "Insert Tracking",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          2224,
+          560
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {},
+        "id": "4019f1a7-e749-4d6b-ba36-58587342fb55",
+        "name": "No Leads - Skip",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          1376,
+          800
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://rlmuovkdvbxzyylbiunj.supabase.co/rest/v1/campaigns?status=eq.ACTIVE&select=smartlead_campaign_id,name,tier,daily_send_limit&order=tier",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "supabaseApi",
+          "options": {}
+        },
+        "id": "f6e75e7f-fa77-4030-af90-3075f5083cde",
+        "name": "Get Active Campaigns1",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          608,
+          592
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "YY3EtNtcV5iZP93u",
+            "name": "Supabase account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Clay Webhook (Lead Enriched)": {
+        "main": [
+          [
+            {
+              "node": "Parse Clay Webhook Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Smartlead Events Webhook": {
+        "main": [
+          [
+            {
+              "node": "Parse Smartlead Event",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Clay Webhook Data": {
+        "main": [
+          [
+            {
+              "node": "Upsert Lead to Supabase",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Upsert Lead to Supabase": {
+        "main": [
+          [
+            {
+              "node": "Respond to Clay Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Smartlead Event": {
+        "main": [
+          [
+            {
+              "node": "Record Event in Supabase",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Record Event in Supabase": {
+        "main": [
+          [
+            {
+              "node": "Respond to Smartlead Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weekly Monday 9am": {
+        "main": [
+          [
+            {
+              "node": "Get Active Campaigns1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Loop Campaigns": {
+        "main": [
+          [
+            {
+              "node": "Get Leads for Tier",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Loop Campaigns",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Leads for Tier": {
+        "main": [
+          [
+            {
+              "node": "Has Leads?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Has Leads?": {
+        "main": [
+          [
+            {
+              "node": "Format for Smartlead",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "No Leads - Skip",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format for Smartlead": {
+        "main": [
+          [
+            {
+              "node": "Add to Smartlead",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Add to Smartlead": {
+        "main": [
+          [
+            {
+              "node": "Mark Leads Synced",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark Leads Synced": {
+        "main": [
+          [
+            {
+              "node": "Build Tracking Records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Tracking Records": {
+        "main": [
+          [
+            {
+              "node": "Insert Tracking",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert Tracking": {
+        "main": [
+          [
+            {
+              "node": "Loop Campaigns",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "No Leads - Skip": {
+        "main": [
+          [
+            {
+              "node": "Loop Campaigns",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Active Campaigns1": {
+        "main": [
+          [
+            {
+              "node": "Loop Campaigns",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "pinData": {},
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "22cf798426a622539dcab25f4b867315ed3d04ff1d826b82b87b8ec2daad1c5b"
+    }
+  }
