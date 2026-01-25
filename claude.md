@@ -1,6 +1,6 @@
 # Appletree Lead Pipeline
 
-**Last Updated:** January 17, 2026
+**Last Updated:** January 24, 2026
 
 ---
 
@@ -44,15 +44,16 @@
 | C-Tier | 2677091 | ACTIVE | 3,040 | 1,817 | 7 days |
 | Marketing Agencies | 2843683 | ACTIVE | 636 | 436 | 7 days |
 
-### All-Time Results (Nov 13 - Jan 16)
+### All-Time Results (Nov 13 - Jan 24)
 
 | Metric | Count | Rate |
 |--------|-------|------|
-| Emails sent | 4,333 | - |
-| Opens | 1,891 | 44% |
-| Clicks (Calendly) | 234 | 5% |
-| Replies | 15 | 0.3% |
+| Emails sent | ~5,500 | - |
+| Opens | ~2,400 | 44% |
+| Clicks (Calendly) | 234 | 4% |
+| Replies | 17 | 0.3% |
 | Interested replies | 1 | - |
+| Booked meetings | 0 | - |
 
 ### A/B Test Campaigns (DEAD - don't use)
 
@@ -67,20 +68,23 @@
 
 ## Email Infrastructure
 
-### Accounts (8 total, 780/day capacity)
+### Accounts (4 total, 440/day capacity)
 
 | Email | Type | Daily Limit | Status |
 |-------|------|-------------|--------|
-| team@appletree-tax.com | Gmail | 120 | Active |
-| team@appletree-taxes.com | Zoho | 120 | Active |
-| patrick@appletree-tax.com | Gmail | 100 | Active |
-| patrick@appletree-advisors.com | Outlook | 100 | Active |
-| sales@appletree-tax.com | Gmail | 100 | Active |
-| polly@macrohub.co | Outlook | 80 | Active (pre-warmed) |
-| eden@macrohub.co | Outlook | 80 | Active (pre-warmed) |
-| flora@macrohub.co | Outlook | 80 | Active (pre-warmed) |
+| team@appletree-tax.com | Gmail | 120 | Active (100% warmup) |
+| team@appletree-taxes.com | Zoho | 120 | Active (98% warmup) |
+| patrick@appletree-tax.com | Gmail | 100 | Active (100% warmup) |
+| sales@appletree-tax.com | Gmail | 100 | Active (100% warmup) |
 
-**Removed:** team@appletree-advisors.com (burned - 27% sender bounce rate on Jan 14)
+**Removed Accounts:**
+- team@appletree-advisors.com (burned - 27% sender bounce rate, Jan 14)
+- patrick@appletree-advisors.com (0% open rate, going to spam - missing DKIM/DMARC, Jan 23)
+- flora@macrohub.co (100% bounce rate, burned domain, Jan 23)
+- polly@macrohub.co (burned domain - 19% domain bounce rate, Jan 24)
+- eden@macrohub.co (burned domain - 19% domain bounce rate, Jan 24)
+
+**Bounce Autopause:** 10% threshold set on all campaigns
 
 **Schedule:** Sun-Sat 08:00-17:30 ET (7 days/week)
 
@@ -89,9 +93,9 @@
 | Domain | Status |
 |--------|--------|
 | appletree-tax.com | SPF, healthy |
-| appletree-advisors.com | SPF only (missing DKIM/DMARC) |
 | appletree-taxes.com | SPF, healthy |
-| macrohub.co | Pre-warmed marketplace domain |
+| appletree-advisors.com | SPF only (missing DKIM/DMARC) - DO NOT USE |
+| macrohub.co | BURNED - 19% bounce rate, removed all accounts |
 
 ---
 
@@ -138,8 +142,10 @@ Clay (enrichment) → Supabase (leads) → Smartlead (campaigns)
 - "No longer monitored" / "not monitored"
 - Very short replies (<10 chars)
 
-**Current recipient:** shane@shanefirek.com (testing)
-**Production:** Change to patrick@appletreebusiness.com
+**Current recipient:** shanefirek@gmail.com (testing)
+**Production:** Uncomment Patrick's email in Edge Function when ready
+
+**Webhooks:** Configured on all 4 campaigns (see [`docs/dns-email-auth.md`](docs/dns-email-auth.md))
 
 ---
 
@@ -151,6 +157,15 @@ Clay (enrichment) → Supabase (leads) → Smartlead (campaigns)
 | `scripts/smartlead/sync_first_names_to_smartlead.py` | Sync first_name from Supabase → Smartlead |
 | `scripts/smartlead/get_campaign_analytics.py` | Pull engagement metrics |
 | `scripts/import_marketing_leads.py` | Import marketing agency leads from CSV |
+| `scripts/dns-manager.ts` | DNS/email auth CLI (SPF/DKIM/DMARC, Resend, Porkbun) |
+
+---
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [`docs/dns-email-auth.md`](docs/dns-email-auth.md) | DNS setup, DMARC status, Resend config, lead notifications |
 
 ---
 
@@ -223,6 +238,10 @@ await tasks.trigger("leads.scrape.hvac", {
 - **Jan 15:** Built lead reply notification Edge Function with junk filtering
 - **Jan 15:** First interested reply - Jordyn from JP HVAC asking for pricing ($400k revenue, wants tax CPA)
 - **Jan 17:** Built appletree-lead-gen repo with Trigger.dev + Apify for automated lead scraping
+- **Jan 23:** Removed flora@macrohub.co (100% bounce rate) and patrick@appletree-advisors.com (0% open rate)
+- **Jan 23:** Set 10% bounce autopause threshold on all campaigns
+- **Jan 24:** Removed polly@macrohub.co and eden@macrohub.co - entire macrohub.co domain burned (19% bounce rate)
+- **Jan 24:** Capacity reduced from 780/day to 440/day (4 healthy accounts remaining)
 
 ---
 
@@ -231,7 +250,8 @@ await tasks.trigger("leads.scrape.hvac", {
 - [ ] Unpause A-Tier and B-Tier campaigns in Smartlead UI
 - [ ] Test lead reply notification (add Resend API key, run test curl)
 - [ ] Switch notification recipient to Patrick when ready
-- [ ] Add DKIM/DMARC to appletree-advisors.com domain
+- [x] ~~Add DKIM/DMARC to appletree-advisors.com domain~~ → Domain burned, not using
 - [x] ~~Build lead gen repo with Apify + Trigger.dev~~ → `../appletree-lead-gen`
 - [ ] Init Trigger.dev in lead-gen repo (`npx trigger.dev@latest init --override-config`)
-- [ ] Add more leads as current pipeline burns through (~2 weeks at 780/day)
+- [ ] Add more leads as current pipeline burns through (~3 weeks at 440/day)
+- [ ] Consider spinning up new accounts on appletree-tax.com or appletree-taxes.com domains to increase capacity
