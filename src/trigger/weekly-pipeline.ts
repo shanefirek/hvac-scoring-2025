@@ -3,6 +3,7 @@ import { weeklyScrapeTask } from "./weekly-scrape";
 import { enrichLeadsTask } from "./enrich-leads";
 import { scoreLeadsTask } from "./score-leads";
 import { syncToSmartleadTask } from "./sync-to-smartlead";
+import { syncFromSmartleadTask } from "./sync-from-smartlead";
 
 /**
  * Weekly lead pipeline orchestrator
@@ -96,7 +97,7 @@ export const weeklyPipeline = schedules.task({
       logger.info("✅ Scoring completed", results.score);
 
       // Step 4: Sync to Smartlead campaigns
-      logger.info("Step 4/4: Syncing to Smartlead");
+      logger.info("Step 4/5: Syncing to Smartlead");
 
       const syncResult = await syncToSmartleadTask.triggerAndWait({
         batchSize: 100, // Process up to 100 per tier
@@ -104,6 +105,14 @@ export const weeklyPipeline = schedules.task({
 
       results.sync = syncResult.output;
       logger.info("✅ Sync completed", results.sync);
+
+      // Step 5: Pull statuses back from Smartlead
+      logger.info("Step 5/5: Syncing statuses from Smartlead");
+
+      const pullResult = await syncFromSmartleadTask.triggerAndWait({});
+
+      results.pullFromSmartlead = pullResult.output;
+      logger.info("✅ Smartlead status sync completed", results.pullFromSmartlead);
 
       // Final summary
       const duration = Math.round((Date.now() - startTime) / 1000);

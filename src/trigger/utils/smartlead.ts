@@ -18,6 +18,23 @@ export interface SmartleadAddLeadResponse {
   status: string;
 }
 
+export interface SmartleadCampaignLead {
+  id: number; // smartlead_lead_id
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  phone_number?: string;
+  website?: string;
+  location?: string;
+  linkedin_profile?: string;
+  status?: string; // COMPLETED, IN_PROGRESS, NOT_STARTED, BLOCKED
+  lead_category?: string; // "Sender Originated Bounce", "Clicked", etc.
+  open_count?: number;
+  click_count?: number;
+  reply_count?: number;
+}
+
 class SmartleadService {
   private apiKey: string;
   private baseUrl = "https://server.smartlead.ai/api/v1";
@@ -120,6 +137,74 @@ class SmartleadService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Fetch all leads from a Smartlead campaign with pagination
+   */
+  async getCampaignLeads(campaignId: number): Promise<SmartleadCampaignLead[]> {
+    logger.info(`Fetching leads from Smartlead campaign ${campaignId}`);
+
+    const allLeads: SmartleadCampaignLead[] = [];
+    let offset = 0;
+    const limit = 100;
+
+    while (true) {
+      try {
+        const response = await axios.get(
+          `${this.baseUrl}/campaigns/${campaignId}/leads`,
+          {
+            params: {
+              api_key: this.apiKey,
+              limit,
+              offset,
+            },
+          }
+        );
+
+        const campaignLeads = response.data?.data || [];
+        if (campaignLeads.length === 0) break;
+
+        for (const item of campaignLeads) {
+          const lead = item.lead;
+          if (!lead) continue;
+
+          allLeads.push({
+            id: lead.id,
+            email: lead.email,
+            first_name: lead.first_name,
+            last_name: lead.last_name,
+            company_name: lead.company_name,
+            phone_number: lead.phone_number,
+            website: lead.website,
+            location: lead.location,
+            linkedin_profile: lead.linkedin_profile,
+            status: item.status,
+            lead_category: item.lead_category,
+            open_count: item.open_count,
+            click_count: item.click_count,
+            reply_count: item.reply_count,
+          });
+        }
+
+        logger.info(`Fetched ${campaignLeads.length} leads (total: ${allLeads.length})`);
+
+        if (campaignLeads.length < limit) break;
+        offset += limit;
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          logger.error(`Smartlead fetch error`, {
+            status: error.response?.status,
+            campaignId,
+            offset,
+          });
+        }
+        throw error;
+      }
+    }
+
+    logger.info(`Total leads fetched from campaign ${campaignId}: ${allLeads.length}`);
+    return allLeads;
   }
 
   /**
